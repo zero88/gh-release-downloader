@@ -12,6 +12,7 @@ exit 11  #)Created by argbash-init v2.10.0
 # ARG_OPTIONAL_SINGLE([parser], p, [Use custom jq parser instead of search by artifact name])
 # ARG_OPTIONAL_SINGLE([source], s, [Download Repository Source instead of release artifact], [])
 # ARG_OPTIONAL_SINGLE([output], o, [Downloaded directory], [$(pwd)])
+# ARG_OPTIONAL_BOOLEAN([debug], , [Debug option], [off])
 # ARG_TYPE_GROUP_SET([sources], [SOURCE], [source], [zip,tar,], [index])
 # ARG_POSITIONAL_SINGLE([repo], [GitHub repository. E.g: zero88/gh-release-downloader])
 # ARGBASH_SET_DELIM([ =])
@@ -29,20 +30,25 @@ exit 11  #)Created by argbash-init v2.10.0
 
 set -e
 
-RED='\033[0;31m'  #]
-NC='\033[0m'      #]
-GREEN='\033[32m'  #]
-YELLOW='\033[33m'   #]
+NC='\033[0m'       #]
+RED='\033[0;31m'   #]
+GREEN='\033[32m'   #]
+YELLOW='\033[33m'  #]
+BLUE='\033[34m'    #]
 function error() {
     echo -e "$RED$1$NC"
 }
 
 function progress() {
-    echo -e "$YELLOW$1$NC"
+    echo -e "$BLUE$1$NC"
 }
 
 function success() {
     echo -e "$GREEN$1$NC"
+}
+
+function debug() {
+    echo -e "$YELLOW$1$NC"
 }
 
 function create_parser() {
@@ -90,7 +96,7 @@ HEADERS=( "Accept: application/vnd.github.v3+json" )
 
 STATUS=$(curl "${HEADERS[@]/#/-H}" -sL -w "%{http_code}" -o "$OUT" "$BASE_URL/$RELEASE_PATH")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
-    cat "$OUT"; rm -rf $OUT;
+    debug "$(<"$OUT")"; rm -rf "$OUT";
     error "Unable found release '$_arg_release' in repository '$_arg_repo'."
     error "HTTP status: $STATUS";
     exit 1;
@@ -100,6 +106,9 @@ r=$(jq "$(create_parser)" < "$OUT")
 [[ -z $_arg_source ]] && ARTIFACT_ID=$(jq -r '.id' <<< $r) || ARTIFACT_ID=$r
 ARTIFACT_NAME=$(guess_artifact_name "$r")
 DOWNLOAD_URL=$(make_download_url "$ARTIFACT_ID")
+
+[[ $_arg_debug == "off" ]] && rm -rf $OUT
+[[ $_arg_debug == "on" ]] && debug "HTTP Response is dump at $OUT"
 
 [[ -z $ARTIFACT_ID ]] || [[ $ARTIFACT_ID == null ]] && { error "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
 success "Found artifact '$ARTIFACT_NAME' in '$_arg_repo:$_arg_release'."
@@ -113,7 +122,7 @@ echo
 progress "Downloading '$ARTIFACT_NAME' to '$_arg_output'..."
 STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" "$DOWNLOAD_URL")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
-    cat "$OUT"; rm -rf $OUT;
+    debug "$(<"$OUT")"; rm -rf "$OUT";
     error "Unable download artifact '$ARTIFACT_NAME'.";
     error "HTTP status: $STATUS";
     exit 3;
