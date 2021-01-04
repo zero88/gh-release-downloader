@@ -20,7 +20,7 @@ GitHub release downloader CLI
       ```bash
       cat >> ~/.bash_alias <<EOL
       #### GHRD
-      GHRD_VERSION=1.0.0
+      GHRD_VERSION=1.1.1
       alias ghrd="docker run --rm -v /tmp:/tmp zero88/ghrd:$GHRD_VERSION"
       EOL
 
@@ -40,14 +40,16 @@ If you want to use `ghrd` locally, please make sure you have these programs befo
 ```bash
 $ ghrd -h
 <GitHub release downloader>
-Usage: ./ghrd [-r|--release <arg>] [-t|--pat <arg>] [-a|--artifact <arg>] [--(no-)regex] [-p|--parser <arg>] [-o|--output <arg>] [-h|--help] [-v|--version] <repo>
+Usage: ./ghrd [-r|--release <arg>] [-t|--pat <arg>] [-a|--artifact <arg>] [-x|--(no-)regex] [-p|--parser <arg>] [-s|--source <SOURCE>] [-o|--output <arg>] [--(no-)debug] [-h|--help] [-v|--version] <repo>
         <repo>: GitHub repository. E.g: zero88/gh-release-downloader
         -r, --release: A release version (default: 'latest')
         -t, --pat: GitHub Personal access token (no default)
         -a, --artifact: Artifact name (no default)
-        --regex, --no-regex: Use regex to search artifact (off by default)
-        -p, --parser: Use custom jq parser (no default)
-        -o, --output: Download directory (default: '/app')
+        -x, --regex, --no-regex: Use regex to search artifact (off by default)
+        -p, --parser: Use custom jq parser instead of search by artifact name (no default)
+        -s, --source: Download Repository Source instead of release artifact. Can be one of: 'zip', 'tar' and '' (no default)
+        -o, --output: Downloaded directory (default: '/app')
+        --debug, --no-debug: Debug option (off by default)
         -h, --help: Prints help
         -v, --version: Prints version
 ```
