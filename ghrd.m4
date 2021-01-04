@@ -36,16 +36,22 @@ BASE_URL="https://api.github.com/repos/$_arg_repo/releases"
 [[ -z $_arg_parser ]] && PARSER=".assets | map(select($JQ_CHECK))[0]" || PARSER="$_arg_parser"
 
 echo "Searching release '$_arg_release' in repository '$_arg_repo'..."
-OUT=/tmp/ghrd-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1).json
+OUT=/tmp/ghrd-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1).json
 HEADERS=( "Accept: application/vnd.github.v3+json" )
 [[ -z $AUTH_HEADER ]] || HEADERS+=("$AUTH_HEADER")
 
-STATUS=$(curl "${HEADERS[@]/#/-H}" -sL -w "%{http_code}" -o "$OUT" $BASE_URL/$RELEASE_PATH)
-[[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]] && { cat "$OUT"; echo $STATUS; exit 1; }
-r=$(cat "$OUT" | jq "$PARSER")
+STATUS=$(curl "${HEADERS[@]/#/-H}" -sL -w "%{http_code}" -o "$OUT" "$BASE_URL/$RELEASE_PATH")
+if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
+    cat "$OUT";
+    echo "Unable found release '$_arg_release' in repository '$_arg_repo'."
+    echo "HTTP status: $STATUS";
+    exit 1;
+fi
+
+r=$(jq "$PARSER" < "$OUT")
 aId=$(echo "$r" | jq -r '.id')
 aName=$(echo "$r" | jq -r '.name')
-
+[[ -z $aId ]] || [[ $aId == null ]] && { echo "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
 echo "Found artifact '$aName' with id: '$aId'."
 
 HEADERS=( "Accept: application/octet-stream" )
@@ -54,10 +60,14 @@ OUT="$_arg_output/$aName"
 
 echo "Downloading '$aName' to '$_arg_output'..."
 echo
-STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" $BASE_URL/assets/$aId)
-[[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]] && { cat "$OUT"; echo $STATUS; exit 1; }
+STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" "$BASE_URL/assets/$aId")
+if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
+    echo "Unable download artifact '$aName'.";
+    echo "HTTP status: $STATUS";
+    exit 3;
+fi
 echo "-----------------------------------------"
-echo "File: $(ls -lh $_arg_output | grep "$aName" | awk '{print $9 " " $5}')"
+echo "File: $(ls -lh $OUT | awk '{print $9 " " $5}')"
 echo "Finish!!!"
 
 # ^^^  TERMINATE YOUR CODE BEFORE THE BOTTOM ARGBASH MARKER  ^^^
