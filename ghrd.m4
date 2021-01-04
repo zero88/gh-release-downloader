@@ -8,9 +8,11 @@ exit 11  #)Created by argbash-init v2.10.0
 # ARG_OPTIONAL_SINGLE([release], r, [A release version], [latest])
 # ARG_OPTIONAL_SINGLE([pat], t, [GitHub Personal access token])
 # ARG_OPTIONAL_SINGLE([artifact], a, [Artifact name])
-# ARG_OPTIONAL_BOOLEAN([regex], , [Use regex to search artifact], [off])
-# ARG_OPTIONAL_SINGLE([parser], p, [Use custom jq parser])
-# ARG_OPTIONAL_SINGLE([output], o, [Download directory], [$(pwd)])
+# ARG_OPTIONAL_BOOLEAN([regex], x, [Use regex to search artifact], [off])
+# ARG_OPTIONAL_SINGLE([parser], p, [Use custom jq parser instead of search by artifact name])
+# ARG_OPTIONAL_SINGLE([source], s, [Download Repository Source instead of release artifact], [])
+# ARG_OPTIONAL_SINGLE([output], o, [Downloaded directory], [$(pwd)])
+# ARG_TYPE_GROUP_SET([sources], [SOURCE], [source], [zip,tar,], [index])
 # ARG_POSITIONAL_SINGLE([repo], [GitHub repository. E.g: zero88/gh-release-downloader])
 # ARGBASH_SET_DELIM([ =])
 # ARG_OPTION_STACKING([getopt])
@@ -43,43 +45,76 @@ function success() {
     echo -e "$GREEN$1$NC"
 }
 
+function create_parser() {
+    if [[ -n $_arg_source ]]; then
+        echo "."
+    elif [[ -n $_arg_parser ]]; then
+        echo "$_arg_parser"
+    else
+        local jq_test=""
+        [[ $_arg_regex == "on" ]] && jq_test=".name|test(\"$_arg_artifact\"; \"il\")" || jq_test=".name == \"$_arg_artifact\""
+        echo ".assets | map(select($jq_test))[0]"
+    fi
+}
+
+function make_download_url() {
+    if [[ -z $_arg_source ]]; then
+        echo "$BASE_URL/assets/$1"
+    elif [[ $_arg_source == 'zip' ]]; then
+        jq -r '.zipball_url' <<< "$1"
+    elif [[ $_arg_source == 'tar' ]]; then
+        jq -r '.tarball_url' <<< "$1"
+    fi
+}
+
+function guess_artifact_name() {
+    if [[ -z $_arg_source ]]; then
+        jq -r '.name' <<< "$1"
+    else
+        local tag=$(jq -r '.tag_name' <<< "$1")
+        local ext="zip"
+        [[ $_arg_source == "tar" ]] && ext="tar.gz"
+        echo "${_arg_repo/\//-}-$tag.$ext"
+    fi
+}
+
+
 BASE_URL="https://api.github.com/repos/$_arg_repo/releases"
-
 [[ $_arg_release != "latest" ]] && RELEASE_PATH="tags/$_arg_release" || RELEASE_PATH="$_arg_release"
-
 [[ -z $_arg_pat ]] && AUTH_HEADER="" || AUTH_HEADER="Authorization: Bearer $_arg_pat"
-
-[[ $_arg_regex == "on" ]] && JQ_CHECK=".name|test(\"$_arg_artifact\"; \"il\")" || JQ_CHECK=".name == \"$_arg_artifact\""
-[[ -z $_arg_parser ]] && PARSER=".assets | map(select($JQ_CHECK))[0]" || PARSER="$_arg_parser"
 
 progress "Searching release '$_arg_release' in repository '$_arg_repo'..."
 OUT=/tmp/ghrd-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1).json
 HEADERS=( "Accept: application/vnd.github.v3+json" )
-[[ -z $AUTH_HEADER ]] || HEADERS+=("$AUTH_HEADER")
+[[ -n $AUTH_HEADER ]] && HEADERS+=( "$AUTH_HEADER" )
 
 STATUS=$(curl "${HEADERS[@]/#/-H}" -sL -w "%{http_code}" -o "$OUT" "$BASE_URL/$RELEASE_PATH")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
-    cat "$OUT";
+    cat "$OUT"; rm -rf $OUT;
     error "Unable found release '$_arg_release' in repository '$_arg_repo'."
     error "HTTP status: $STATUS";
     exit 1;
 fi
 
-r=$(jq "$PARSER" < "$OUT")
-aId=$(echo "$r" | jq -r '.id')
-aName=$(echo "$r" | jq -r '.name')
-[[ -z $aId ]] || [[ $aId == null ]] && { error "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
-success "Found artifact '$aName' with id: '$aId'."
+r=$(jq "$(create_parser)" < "$OUT")
+[[ -z $_arg_source ]] && ARTIFACT_ID=$(jq -r '.id' <<< $r) || ARTIFACT_ID=$r
+ARTIFACT_NAME=$(guess_artifact_name "$r")
+DOWNLOAD_URL=$(make_download_url "$ARTIFACT_ID")
 
-HEADERS=( "Accept: application/octet-stream" )
-OUT="$_arg_output/$aName"
-[[ -z $AUTH_HEADER ]] || HEADERS+=("$AUTH_HEADER")
+[[ -z $ARTIFACT_ID ]] || [[ $ARTIFACT_ID == null ]] && { error "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
+success "Found artifact '$ARTIFACT_NAME' in '$_arg_repo:$_arg_release'."
+
+HEADERS=()
+[[ -z $_arg_source ]] && HEADERS+=( "Accept: application/octet-stream" )
+[[ -n $AUTH_HEADER ]] && HEADERS+=( "$AUTH_HEADER" )
+OUT="$_arg_output/$ARTIFACT_NAME"
 
 echo
-progress "Downloading '$aName' to '$_arg_output'..."
-STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" "$BASE_URL/assets/$aId")
+progress "Downloading '$ARTIFACT_NAME' to '$_arg_output'..."
+STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" "$DOWNLOAD_URL")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
-    error "Unable download artifact '$aName'.";
+    cat "$OUT"; rm -rf $OUT;
+    error "Unable download artifact '$ARTIFACT_NAME'.";
     error "HTTP status: $STATUS";
     exit 3;
 fi
