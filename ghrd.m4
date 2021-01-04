@@ -26,6 +26,23 @@ exit 11  #)Created by argbash-init v2.10.0
 # ------------------------------
 
 set -e
+
+RED='\033[0;31m'  #]
+NC='\033[0m'      #]
+GREEN='\033[32m'  #]
+YELLOW='\033[33m'   #]
+function error() {
+    echo -e "$RED$1$NC"
+}
+
+function progress() {
+    echo -e "$YELLOW$1$NC"
+}
+
+function success() {
+    echo -e "$GREEN$1$NC"
+}
+
 BASE_URL="https://api.github.com/repos/$_arg_repo/releases"
 
 [[ $_arg_release != "latest" ]] && RELEASE_PATH="tags/$_arg_release" || RELEASE_PATH="$_arg_release"
@@ -35,7 +52,7 @@ BASE_URL="https://api.github.com/repos/$_arg_repo/releases"
 [[ $_arg_regex == "on" ]] && JQ_CHECK=".name|test(\"$_arg_artifact\"; \"il\")" || JQ_CHECK=".name == \"$_arg_artifact\""
 [[ -z $_arg_parser ]] && PARSER=".assets | map(select($JQ_CHECK))[0]" || PARSER="$_arg_parser"
 
-echo "Searching release '$_arg_release' in repository '$_arg_repo'..."
+progress "Searching release '$_arg_release' in repository '$_arg_repo'..."
 OUT=/tmp/ghrd-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1).json
 HEADERS=( "Accept: application/vnd.github.v3+json" )
 [[ -z $AUTH_HEADER ]] || HEADERS+=("$AUTH_HEADER")
@@ -43,32 +60,32 @@ HEADERS=( "Accept: application/vnd.github.v3+json" )
 STATUS=$(curl "${HEADERS[@]/#/-H}" -sL -w "%{http_code}" -o "$OUT" "$BASE_URL/$RELEASE_PATH")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
     cat "$OUT";
-    echo "Unable found release '$_arg_release' in repository '$_arg_repo'."
-    echo "HTTP status: $STATUS";
+    error "Unable found release '$_arg_release' in repository '$_arg_repo'."
+    error "HTTP status: $STATUS";
     exit 1;
 fi
 
 r=$(jq "$PARSER" < "$OUT")
 aId=$(echo "$r" | jq -r '.id')
 aName=$(echo "$r" | jq -r '.name')
-[[ -z $aId ]] || [[ $aId == null ]] && { echo "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
-echo "Found artifact '$aName' with id: '$aId'."
+[[ -z $aId ]] || [[ $aId == null ]] && { error "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
+success "Found artifact '$aName' with id: '$aId'."
 
 HEADERS=( "Accept: application/octet-stream" )
 OUT="$_arg_output/$aName"
 [[ -z $AUTH_HEADER ]] || HEADERS+=("$AUTH_HEADER")
 
-echo "Downloading '$aName' to '$_arg_output'..."
+progress "Downloading '$aName' to '$_arg_output'..."
 echo
 STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" "$BASE_URL/assets/$aId")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
-    echo "Unable download artifact '$aName'.";
-    echo "HTTP status: $STATUS";
+    error "Unable download artifact '$aName'.";
+    error "HTTP status: $STATUS";
     exit 3;
 fi
-echo "-----------------------------------------"
+echo "--------------------------------------------------------------------------------"
 echo "File: $(ls -lh $OUT | awk '{print $9 " " $5}')"
-echo "Finish!!!"
+success "Finish!!!"
 
 # ^^^  TERMINATE YOUR CODE BEFORE THE BOTTOM ARGBASH MARKER  ^^^
 
