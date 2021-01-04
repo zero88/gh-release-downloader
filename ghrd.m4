@@ -75,8 +75,8 @@ HEADERS=( "Accept: application/octet-stream" )
 OUT="$_arg_output/$aName"
 [[ -z $AUTH_HEADER ]] || HEADERS+=("$AUTH_HEADER")
 
-progress "Downloading '$aName' to '$_arg_output'..."
 echo
+progress "Downloading '$aName' to '$_arg_output'..."
 STATUS=$(curl "${HEADERS[@]/#/-H}" -L -w "%{http_code}" -o "$OUT" "$BASE_URL/assets/$aId")
 if [[ ! "$STATUS" =~ ^2[[:digit:]][[:digit:]] ]]; then
     error "Unable download artifact '$aName'.";
