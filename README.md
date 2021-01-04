@@ -1,5 +1,8 @@
 # GitHub release downloader
 
+![Docker Image Version (latest semver)](https://img.shields.io/docker/v/zero88/ghrd?sort=semver&style=flat-square)
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/zero88/gh-release-downloader?sort=semver)
+
 GitHub release downloader CLI
 
 ## Installation
