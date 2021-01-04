@@ -1,0 +1,88 @@
+name: docker-build-release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+    paths-ignore:
+      - 'README.md'
+      - 'DOCKER.md'
+      - 'LICENSE'
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: context
+        id: context
+        run: |
+          images=ghcr.io/zero88/ghrd
+          isRelease=${{ startsWith(github.ref, 'refs/tags/v') }}
+          [[ $isRelease == "true" ]] && images=$images,zero88/ghrd
+          echo ::set-output name=isRelease::$isRelease
+          echo ::set-output name=version::${v#refs/tags/v}
+          echo ::set-output name=argbashVersion::$(cat argbash.txt)
+          echo ::set-output name=images::$images
+
+      - name: Docker meta
+        id: docker_meta
+        uses: crazy-max/ghaction-docker-meta@v1
+        with:
+          images: ${{ steps.context.outputs.images }}
+          tag-latest: true
+          tag-sha: true
+          tag-semver: |
+            {{version}}
+            {{major}}.{{minor}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        if: ${{ steps.context.outputs.isRelease == 'true' }}
+        with:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.OSS_GHA_DOCKER_HUB }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.OSS_GITHUB_TOKEN }}
+
+      - name: Docker build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: Dockerfile
+          build-args: |
+            ARGBASH_VERSION=${{ steps.context.outputs.argbashVersion }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          push: true
+
+      - name: Copy artifact
+        if: ${{ steps.context.outputs.isRelease == 'true' }}
+        run: |
+          docker create --name ghrd ghcr.io/zero88/ghrd:${{ steps.context.outputs.version }}
+          docker cp ghrd:/app/ghrd /tmp/ghrd
+          docker rm -f ghrd
+
+      - name: Create Release
+        if: ${{ steps.context.outputs.isRelease == 'true' }}
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.context.outputs.version }}
+          name: Release v${{ steps.context.outputs.version }}
+          draft: false
+          prerelease: false
+          files: /tmp/ghrd
