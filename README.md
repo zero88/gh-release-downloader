@@ -7,7 +7,7 @@ GitHub release downloader CLI
 
 ## Installation
 
-1. Use [`docker`](https://docs.docker.com/engine/install/)
+1. Use [`docker`](https://hub.docker.com/r/zero88/ghrd)
 
     - One line
 
