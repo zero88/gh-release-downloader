@@ -21,4 +21,6 @@ COPY --chown=runner:bot --from=builder /app/ghrd ./
 
 USER runner:bot
 
-ENTRYPOINT [ "./ghrd" ]
+ENV PATH="/app:${PATH}"
+
+ENTRYPOINT [ "ghrd" ]
