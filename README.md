@@ -31,18 +31,18 @@ GitHub release downloader CLI
    
    - Debian/Ubuntu
      ```bash
-     sudo GHRD_VERSION=1.1.1 curl -L https://github.com/zero88/gh-release-downloader/releases/download/v$GHRD_VERSION/ghrd -o /usr/local/bin/ghrd \
-                        && sudo chmod +x /usr/local/bin/ghrd \
-                        && sudo ln -s /usr/local/bin/ghrd /usr/bin/ghrd \
-                        && sudo apt install jq -y
+     sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v1.1.1/ghrd -o /usr/local/bin/ghrd \
+        && sudo chmod +x /usr/local/bin/ghrd \
+        && sudo ln -s /usr/local/bin/ghrd /usr/bin/ghrd \
+        && sudo apt install jq -y
      ```
    
    - Fedora/CentOS/RedHat
      ```bash
-     sudo GHRD_VERSION=1.1.1 curl -L https://github.com/zero88/gh-release-downloader/releases/download/v$GHRD_VERSION/ghrd -o /usr/local/bin/ghrd \
-                        && sudo chmod +x /usr/local/bin/ghrd \
-                        && sudo ln -s /usr/local/bin/ghrd /usr/bin/ghrd \
-                        && sudo yum install jq -y
+     sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v1.1.1/ghrd -o /usr/local/bin/ghrd \
+        && sudo chmod +x /usr/local/bin/ghrd \
+        && sudo ln -s /usr/local/bin/ghrd /usr/bin/ghrd \
+        && sudo yum install jq -y
      ```
 
 ## Usage
