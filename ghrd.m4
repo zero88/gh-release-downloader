@@ -90,7 +90,7 @@ BASE_URL="https://api.github.com/repos/$_arg_repo/releases"
 [[ -z $_arg_pat ]] && AUTH_HEADER="" || AUTH_HEADER="Authorization: Bearer $_arg_pat"
 
 progress "Searching release '$_arg_release' in repository '$_arg_repo'..."
-OUT=/tmp/ghrd-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1).json
+OUT=/tmp/ghrd-$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1).json
 HEADERS=( "Accept: application/vnd.github.v3+json" )
 [[ -n $AUTH_HEADER ]] && HEADERS+=( "$AUTH_HEADER" )
 
@@ -107,7 +107,7 @@ r=$(jq "$(create_parser)" < "$OUT")
 ARTIFACT_NAME=$(guess_artifact_name "$r")
 DOWNLOAD_URL=$(make_download_url "$ARTIFACT_ID")
 
-[[ $_arg_debug == "off" ]] && rm -rf $OUT
+[[ $_arg_debug == "off" ]] && rm -rf "$OUT"
 [[ $_arg_debug == "on" ]] && debug "HTTP Response is dump at $OUT"
 
 [[ -z $ARTIFACT_ID ]] || [[ $ARTIFACT_ID == null ]] && { error "Not Found artifact '$_arg_artifact' with regex option '$_arg_regex'"; exit 2; }
