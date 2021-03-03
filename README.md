@@ -28,22 +28,36 @@ GitHub release downloader CLI
       ```
 
 2. Use binary in release
-   
-   - Debian/Ubuntu
-     ```bash
-     sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v1.1.1/ghrd -o /usr/local/bin/ghrd \
+
+    - Debian/Ubuntu
+
+      ```bash
+      export GHRDVER=1.1.2 && sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v$GHRDVER/ghrd -o /usr/local/bin/ghrd \
         && sudo chmod +x /usr/local/bin/ghrd \
         && sudo ln -s /usr/local/bin/ghrd /usr/bin/ghrd \
-        && sudo apt install jq -y
-     ```
-   
-   - Fedora/CentOS/RedHat
-     ```bash
-     sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v1.1.1/ghrd -o /usr/local/bin/ghrd \
+        && sudo apt install jq -y \
+        && unset GHRDVER
+      ```
+
+    - Fedora/CentOS/RedHat
+
+      ```bash
+      export GHRDVER=1.1.2 && sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v$GHRDVER/ghrd -o /usr/local/bin/ghrd \
         && sudo chmod +x /usr/local/bin/ghrd \
         && sudo ln -s /usr/local/bin/ghrd /usr/bin/ghrd \
-        && sudo yum install jq -y
-     ```
+        && sudo yum install jq -y \
+        && unset GHRDVER
+      ```
+
+    - MacOS
+
+      ```bash
+      export GHRDVER=1.1.2 && sudo curl -L https://github.com/zero88/gh-release-downloader/releases/download/v$GHRDVER/ghrd -o /usr/local/opt/ghrd/$GHRDVER \
+        && ln -s /usr/local/opt/ghrd/$GHRDVER/ghrd /usr/local/bin \
+        && sudo chmod +x /usr/local/bin/ghrd \
+        && brew install jq \
+        && unset GHRDVER
+      ```
 
 ## Usage
 

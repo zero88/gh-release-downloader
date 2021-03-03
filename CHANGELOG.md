@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v1.1.2](https://github.com/zero88/gh-release-downloader/releases/tag/v1.1.2) (2021-03-03)
+
+### Changed
+
+- Support `macOS` [#3](https://github.com/zero88/gh-release-downloader/issues/3) from @aniqueta
+
 ## [v1.1.1](https://github.com/zero88/gh-release-downloader/releases/tag/v1.1.1) (2021-01-04)
 
 ### Changed

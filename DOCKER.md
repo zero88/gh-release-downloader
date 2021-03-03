@@ -21,7 +21,7 @@ Docker Registry for GitHub action cache.
       ```bash
       cat >> ~/.bash_alias <<EOL
       #### GHRD
-      GHRD_VERSION=1.1.1
+      GHRD_VERSION=1.1.2
       alias ghrd="docker run --rm -v /tmp:/tmp zero88/ghrd:$GHRD_VERSION"
       EOL
 
