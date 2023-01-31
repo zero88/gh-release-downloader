@@ -90,7 +90,7 @@ BASE_URL="https://api.github.com/repos/$_arg_repo/releases"
 [[ -z $_arg_pat ]] && AUTH_HEADER="" || AUTH_HEADER="Authorization: Bearer $_arg_pat"
 
 progress "Searching release '$_arg_release' in repository '$_arg_repo'..."
-OUT=/tmp/ghrd-$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1).json
+OUT=/tmp/ghrd-$($RANDOM).json
 HEADERS=( "Accept: application/vnd.github.v3+json" )
 [[ -n $AUTH_HEADER ]] && HEADERS+=( "$AUTH_HEADER" )
 
