@@ -31,8 +31,8 @@ jobs:
           git_commit_gpgsign: true
           git_tag_gpgsign: true
           git_push_gpgsign: false
-          gpg_private_key: ${{ secrets.OSS_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.OSS_GPG_PASSPHARSE }}
+          gpg_private_key: ${{ secrets.CI_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.CI_GPG_PASSPHARSE }}
 
       - name: Project context
         id: context
@@ -45,6 +45,7 @@ jobs:
       - name: Query dynamic properties
         id: dynamic_prop
         shell: bash
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
         run: |
           images=ghcr.io/zero88/ghrd
           [[ "${{ steps.context.outputs.isTag }}" == "true" ]] && images=$images,zero88/ghrd
@@ -54,6 +55,7 @@ jobs:
       - name: Docker meta
         id: docker_meta
         uses: docker/metadata-action@v4
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
         with:
           images: ${{ steps.dynamic_prop.outputs.images }}
           tag-latest: true
@@ -64,6 +66,7 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -82,6 +85,7 @@ jobs:
 
       - name: Docker build
         uses: docker/build-push-action@v4
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
         with:
           context: .
           file: Dockerfile
@@ -92,12 +96,16 @@ jobs:
           push: true
 
       - name: Copy artifact
+        shell: bash
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
         run: |
           docker create --name ghrd ghcr.io/zero88/ghrd:${{ steps.context.outputs.version }}
           docker cp ghrd:/app/ghrd /tmp/ghrd
           docker rm -f ghrd
 
-      - uses: actions/upload-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
         with:
           name: ghrd
           path: /tmp/ghrd
