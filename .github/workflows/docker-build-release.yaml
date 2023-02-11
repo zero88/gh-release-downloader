@@ -60,9 +60,9 @@ jobs:
           flavor: |
             latest=auto
           tags: |
-            type=sha
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=sha
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -77,7 +77,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
-        if: ${{ steps.context.outputs.decision_publish == 'true' }}
+        if: ${{ steps.context.outputs.decision_build == 'true' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -93,13 +93,13 @@ jobs:
             ARGBASH_VERSION=${{ steps.dynamic_prop.outputs.argbashVersion }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          push: ${{ steps.context.outputs.decision_publish }}
+          push: ${{ steps.context.outputs.decision_build }}
 
       - name: Copy artifact
         shell: bash
         if: ${{ steps.context.outputs.decision_build == 'true' }}
         run: |
-          docker create --name ghrd ghcr.io/zero88/ghrd:${{ steps.context.outputs.version }}
+          docker create --name ghrd ghcr.io/zero88/ghrd:${{ env.DOCKER_METADATA_OUTPUT_VERSION }}
           docker cp ghrd:/app/ghrd /tmp/ghrd
           docker rm -f ghrd
 
