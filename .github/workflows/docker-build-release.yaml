@@ -2,17 +2,15 @@ name: docker-build-release
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    branches: [ main ]
+    tags: [ 'v*' ]
     paths-ignore:
       - 'README.md'
       - 'DOCKER.md'
       - 'LICENSE'
-    pull_request:
-      types: [ opened, synchronize, reopened, closed ]
-      branches: [ main ]
+  pull_request:
+    types: [ opened, synchronize, reopened, closed ]
+    branches: [ main ]
 
 jobs:
 
@@ -47,10 +45,11 @@ jobs:
         shell: bash
         if: ${{ steps.context.outputs.decision_build == 'true' }}
         run: |
+          argbashVersion=$(cat argbash.txt)
           images=ghcr.io/zero88/ghrd
           [[ "${{ steps.context.outputs.isTag }}" == "true" ]] && images=$images,zero88/ghrd
           echo images=$images >> $GITHUB_OUTPUT
-          echo argbashVersion::$(cat argbash.txt) >> $GITHUB_OUTPUT
+          echo argbashVersion=$argbashVersion >> $GITHUB_OUTPUT
 
       - name: Docker meta
         id: docker_meta
@@ -58,11 +57,12 @@ jobs:
         if: ${{ steps.context.outputs.decision_build == 'true' }}
         with:
           images: ${{ steps.dynamic_prop.outputs.images }}
-          tag-latest: true
-          tag-sha: true
-          tag-semver: |
-            {{version}}
-            {{major}}.{{minor}}
+          flavor: |
+            latest=auto
+          tags: |
+            type=sha
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -93,7 +93,7 @@ jobs:
             ARGBASH_VERSION=${{ steps.dynamic_prop.outputs.argbashVersion }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          push: true
+          push: ${{ steps.context.outputs.decision_publish }}
 
       - name: Copy artifact
         shell: bash
