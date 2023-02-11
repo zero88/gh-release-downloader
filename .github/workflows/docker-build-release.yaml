@@ -10,31 +10,52 @@ on:
       - 'README.md'
       - 'DOCKER.md'
       - 'LICENSE'
+    pull_request:
+      types: [ opened, synchronize, reopened, closed ]
+      branches: [ main ]
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
 
-      - name: context
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.OSS_GITHUB_TOKEN }}
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_push_gpgsign: false
+          gpg_private_key: ${{ secrets.OSS_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.OSS_GPG_PASSPHARSE }}
+
+      - name: Project context
         id: context
+        uses: zero88/gh-project-context@v1.2
+        with:
+          mustSign: true
+          nextVerMode: PATCH
+          patterns: ghrd.m4::(VERSION=)(.+)::1
+
+      - name: Query dynamic properties
+        id: dynamic_prop
+        shell: bash
         run: |
           images=ghcr.io/zero88/ghrd
-          ref=${{ github.ref }}
-          isRelease=${{ startsWith(github.ref, 'refs/tags/v') }}
-          [[ $isRelease == "true" ]] && images=$images,zero88/ghrd
-          echo ::set-output name=isRelease::$isRelease
-          echo ::set-output name=version::${ref#refs/tags/v}
-          echo ::set-output name=argbashVersion::$(cat argbash.txt)
-          echo ::set-output name=images::$images
+          [[ "${{ steps.context.outputs.isTag }}" == "true" ]] && images=$images,zero88/ghrd
+          echo images=$images >> $GITHUB_OUTPUT
+          echo argbashVersion::$(cat argbash.txt) >> $GITHUB_OUTPUT
 
       - name: Docker meta
         id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v1
+        uses: docker/metadata-action@v4
         with:
-          images: ${{ steps.context.outputs.images }}
+          images: ${{ steps.dynamic_prop.outputs.images }}
           tag-latest: true
           tag-sha: true
           tag-semver: |
@@ -42,42 +63,47 @@ jobs:
             {{major}}.{{minor}}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
-        if: ${{ steps.context.outputs.isRelease == 'true' }}
+        uses: docker/login-action@v2
+        if: ${{ steps.context.outputs.isTag == 'true' }}
         with:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.OSS_GHA_DOCKER_HUB }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
+        if: ${{ steps.context.outputs.decision_publish == 'true' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.OSS_GITHUB_TOKEN }}
 
       - name: Docker build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: Dockerfile
           build-args: |
-            ARGBASH_VERSION=${{ steps.context.outputs.argbashVersion }}
+            ARGBASH_VERSION=${{ steps.dynamic_prop.outputs.argbashVersion }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           push: true
 
       - name: Copy artifact
-        if: ${{ steps.context.outputs.isRelease == 'true' }}
         run: |
           docker create --name ghrd ghcr.io/zero88/ghrd:${{ steps.context.outputs.version }}
           docker cp ghrd:/app/ghrd /tmp/ghrd
           docker rm -f ghrd
 
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ghrd
+          path: /tmp/ghrd
+
       - name: Create Release
-        if: ${{ steps.context.outputs.isRelease == 'true' }}
+        if: ${{ steps.context.outputs.isTag == 'true' }}
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

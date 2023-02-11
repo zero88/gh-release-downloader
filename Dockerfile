@@ -6,7 +6,7 @@ COPY ghrd.m4 ./
 RUN argbash ghrd.m4 -o ghrd \
     && chmod +x ghrd
 
-FROM alpine:3.12
+FROM alpine:3.17
 
 ARG MAINTAINER="zero88 <sontt246@gmail.com>"
 
