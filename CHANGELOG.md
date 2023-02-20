@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v1.1.3](https://github.com/zero88/gh-release-downloader/releases/tag/v1.1.3) (2023-02-20)
+
+### Changed
+
+- Freezes when run from gnu make [#4](https://github.com/zero88/gh-release-downloader/issues/4). Thanks @MuratovAS
+
 ## [v1.1.2](https://github.com/zero88/gh-release-downloader/releases/tag/v1.1.2) (2021-03-03)
 
 ### Changed
