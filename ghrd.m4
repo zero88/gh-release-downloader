@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=1.1.3
+VERSION=1.1.4
 
 # m4_ignore(
 echo "This is just a script template, not the script (yet) - pass it to 'argbash' to fix this." >&2
